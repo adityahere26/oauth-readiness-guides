@@ -29,14 +29,15 @@ export async function POST(req: Request) {
         const cached = await getGenerated(key);
         if (cached && !fresh && Date.now() - Date.parse(cached.updatedAt) < CACHE_MS) {
           emit({ type: "step", label: `Found a guide generated ${cached.updatedAt.slice(0, 10)}`, detail: "Use 'regenerate' on the guide page for a fresh run." });
-          emit({ type: "done", slug: cached.slug });
+          emit({ type: "done", slug: cached.slug, guide: cached });
           return;
         }
 
         const guide = await generateGuide(input, emit);
         if (curatedGuides.some((g) => g.slug === guide.slug)) guide.slug = `${guide.slug}-agent`;
-        await saveGenerated(guide);
-        emit({ type: "done", slug: guide.slug });
+        // Best effort: without a database (e.g. on serverless) the guide still reaches the browser in the done event.
+        await saveGenerated(guide).catch((e) => console.warn("saveGenerated failed", e));
+        emit({ type: "done", slug: guide.slug, guide });
       } catch (e) {
         console.error(e);
         emit({ type: "error", message: (e as Error).message || "Generation failed" });

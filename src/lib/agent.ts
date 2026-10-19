@@ -5,7 +5,7 @@ import { fetchPage, probeOAuthMetadata, webSearch, type SearchResult } from "./t
 export type AgentEvent =
   | { type: "step"; label: string; detail?: string }
   | { type: "source"; title: string; url: string }
-  | { type: "done"; slug: string }
+  | { type: "done"; slug: string; guide?: Guide }
   | { type: "error"; message: string };
 
 type Emit = (e: AgentEvent) => void;

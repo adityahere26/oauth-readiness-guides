@@ -2,7 +2,7 @@
 
 **How long until your users can connect an app?** Setup and approval guides for provider OAuth apps, for developers building agents on Composio. There's a curated library, plus a research agent that writes a guide for any app on demand. Every claim is labeled by how we know it.
 
-- **Live:** _<your Vercel URL>_
+- **Live:** https://oauth-readiness-guides.vercel.app
 - **Try:** open [Gmail](/guides/gmail) (hardest), [GitHub](/guides/github) (easiest), or type any app (e.g. "Zoom", "airtable.com") into the box on the home page.
 
 ---
@@ -34,6 +34,7 @@ Guides can be shared (stable URL), exported (Markdown download for a ticket or S
 | **Code checks quotes, a second model pass checks support** | In testing, the first draft cited real pages for claims they didn't make (e.g. "review takes 5–10 business days"). Matching quotes in code catches invented quotes. The skeptic pass catches real quotes attached to the wrong claim. Failures are downgraded to *unverified*, not hidden. |
 | **Gap check before concluding "no review"** | Absence of evidence was the most dangerous failure (Dropbox: the agent first said "no review needed", but production approval is required at 50 users). If the draft finds no approval process, the agent searches again specifically for one. |
 | **Live OAuth discovery probe** | A small, credential-free hands-on check: `/.well-known/openid-configuration` and `oauth-authorization-server` on the provider's domains (including `mcp.`). It produced real findings, e.g. Atlassian, Calendly and Dropbox advertise **dynamic client registration** endpoints, which is how an agent could register a client itself. That's mostly for MCP clients, so the guide says to test it, not that it works. |
+| **Share links carry the guide, so there's no database** | A generated guide is compressed into its link (`/guides/<slug>#g=…`, about 4 KB), so a link pasted into Slack or a ticket works with no storage to run. The `#` part is never sent to the server. Optional Upstash Redis adds a server-side cache and a "recently generated" list. |
 | **Curated library + live agent share one schema** | Curated guides are the quality bar the agent is held to, and every guide renders the same way. |
 
 ## What I tested, what's sourced, what's uncertain
@@ -75,9 +76,9 @@ npm run dev                   # http://localhost:3000
 | `GROQ_API_KEY` | yes | console.groq.com (free) |
 | `TAVILY_API_KEY` | strongly recommended | tavily.com (free). Without it the agent falls back to DuckDuckGo HTML, which often returns a bot-check page. |
 | `GROQ_MODEL` | no | default `openai/gpt-oss-120b` |
-| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | on Vercel | Persists generated guides so share links survive. Locally they're saved to `.data/`. |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` (or Vercel's `KV_REST_API_*`) | no | Optional cache + "recently generated" list. Share links work without it. Locally guides are saved to `.data/`. |
 
-**Deploy:** `npx vercel` → add the env vars above → `npx vercel --prod`. Upstash Redis can be added from the Vercel Marketplace (free).
+**Deploy:** `npx vercel` → add `GROQ_API_KEY` and `TAVILY_API_KEY` → `npx vercel --prod`.
 
 ## Code map
 
@@ -94,4 +95,5 @@ npm run dev                   # http://localhost:3000
 - The skeptic pass is deliberately strict and sometimes rejects a correct claim, e.g. when the model stitches two quotes together with "…". Erring toward "unverified" is the intended failure mode.
 - Difficulty scores are a judgement on a 1–5 scale, not a measurement.
 - 8 curated guides, not 100. The schema and agent are built so the library can grow by running the agent and then having a human review each draft.
+- The live deployment runs without a database, so the home page's "recently generated" list stays empty there, and a generated guide is only reachable through its share link.
 - No auth or rate limiting on `/api/generate`. Fine for a demo, but it needs adding before public use.

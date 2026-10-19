@@ -34,6 +34,9 @@ export function Generator({ initial = "", fresh = false, compact = false }: { in
           const ev = JSON.parse(line) as AgentEvent;
           setEvents((x) => [...x, ev]);
           if (ev.type === "done") {
+            try {
+              if (ev.guide) sessionStorage.setItem(`guide:${ev.slug}`, JSON.stringify(ev.guide));
+            } catch {}
             router.push(`/guides/${ev.slug}`);
             router.refresh();
           }
