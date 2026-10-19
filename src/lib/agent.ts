@@ -94,10 +94,17 @@ Return JSON {"read": [up to ${MAX_PAGES} URLs from the list, most useful first],
     queries = round === 0 ? (sel.search ?? []).slice(0, 2) : [];
     if (sel.reason) emit({ type: "step", label: "Chose sources", detail: sel.reason });
   }
-  if (!chosen.length) chosen = results.slice(0, MAX_PAGES).map((r) => r.url);
+  // The model sometimes picks just one page; top up to 3, official docs first, so one page never decides the guide.
+  if (chosen.length < 3) {
+    const domain = plan.website.replace(/^www\./, "");
+    const extra = results
+      .filter((r) => !chosen.includes(r.url))
+      .sort((a, b) => Number(b.url.includes(domain) || b.url.includes(plan.devDocsHint)) - Number(a.url.includes(domain) || a.url.includes(plan.devDocsHint)));
+    chosen.push(...extra.slice(0, 3 - chosen.length).map((r) => r.url));
+  }
 
   // 3 ── Read pages + live probe (no LLM) ───────────────────────────────
-  emit({ type: "step", label: `Reading ${chosen.length} pages and probing ${plan.website}'s OAuth endpoints` });
+  emit({ type: "step", label: `Reading ${chosen.length} page${chosen.length === 1 ? "" : "s"} and probing ${plan.website}'s OAuth endpoints` });
   const [fetched, probe] = await Promise.all([Promise.all(chosen.map((u) => fetchPage(u, 2400))), probeOAuthMetadata(plan.website)]);
   const seenUrls = new Set<string>();
   const pages: Page[] = fetched
@@ -212,7 +219,7 @@ Ground every claim in the SOURCES. Rules:
 - Otherwise evidence.level = "inferred". Never invent URLs, review processes, durations, or tiers.
 - If sources don't mention an app review / verification / marketplace process, set approvalWait to "None found in docs" and add an uncertainty. Don't guess one.
 - Keep ACTIVE EFFORT (hands-on) separate from APPROVAL WAIT (provider review).
-- stages: the ladder from "works for me" to "works for all users". Only include stages the sources support, plus the obvious first one.
+- stages: the ladder from "works for me" to "works for all users". Use only gates the provider actually defines (test users, development mode, user caps, review, listing). Do NOT invent stages like "beta users" or "early adopters". If no gate is documented, use two stages: your own account, then everyone.
 - Step owner: "agent" if an AI agent could do it (draft text, prefill config values, write manifests, look things up), "you" if it needs the developer's login, identity, payment or judgement, "provider" for review/waiting.
 - If the probe shows a registration_endpoint, you may mention dynamic client registration as an option to test. Don't claim it works for regular API access (it is often for MCP clients only).
 - Put unknowns in "uncertainties". Fewer accurate items beat many guesses.
