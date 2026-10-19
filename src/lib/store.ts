@@ -9,10 +9,10 @@ import { Guide } from "./schema";
  * Production: Upstash Redis (free tier, works on Vercel).
  * Local dev: a JSON file under .data/ (on Vercel without Redis this falls back to /tmp, which is ephemeral).
  */
-const redis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? new Redis({ url: process.env.UPSTASH_REDIS_REST_URL, token: process.env.UPSTASH_REDIS_REST_TOKEN })
-    : null;
+// Accept both Upstash's own variable names and the KV_* names the Vercel Marketplace integration injects.
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
+const redis = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
 const FILE = path.join(process.env.VERCEL ? "/tmp" : process.cwd(), ".data", "generated.json");
 
